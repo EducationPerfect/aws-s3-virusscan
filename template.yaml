@@ -20,8 +20,8 @@ Metadata:
     - Label:
         default: 'Parent Stacks'
       Parameters:
-      - ParentVPCStack
-      - ParentSSHBastionStack
+      - VpcId
+      - SubnetIds
     - Label:
         default: 'Scan Parameters'
       Parameters:
@@ -48,13 +48,12 @@ Metadata:
       - VolumeSize
       - SwapSize
 Parameters:
-  ParentVPCStack:
-    Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
-    Type: String
-  ParentSSHBastionStack:
-    Description: 'Optional stack name of parent SSH bastion host/instance stack based on vpc/vpc-ssh-bastion.yaml template.'
-    Type: String
-    Default: ''
+  VpcId:
+    Description: 'Id of the VPC to deploy into.'
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Description: 'List of VPC Subnets to deploy into.'
+    Type: List<AWS::EC2::Subnet::Id>
   S3BucketRestriction:
     Description: 'Restrict access to specific S3 buckets (e.g. arn:aws:s3:::s3-virusscan-a,arn:aws:s3:::s3-virusscan-b or * to allow access to all S3 buckets).'
     Type: CommaDelimitedList
@@ -148,11 +147,9 @@ Parameters:
     MinValue: 0
     MaxValue: 8
 Conditions:
-  HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
   HasIAMUserSSHAccess: !Equals [!Ref IAMUserSSHAccess, 'true']
   HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
-  HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
   HasTagFiles: !Equals [!Ref TagFiles, 'true']
   HasSpotPrice: !Not [!Equals [!Ref SpotPrice, '']]
@@ -302,7 +299,7 @@ Resources:
       LaunchConfigurationName: !Ref ScanLaunchConfiguration
       MaxSize: !Ref AutoScalingMaxSize
       MinSize: !Ref AutoScalingMinSize
-      VPCZoneIdentifier: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetsPublic'}]
+      VPCZoneIdentifier: !Ref SubnetIds
       Tags:
       - Key: Name
         Value: !Ref 'AWS::StackName'
@@ -1059,7 +1056,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: 'Antivirus for Amazon S3'
-      VpcId: {'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'}
+      VpcId: !Ref VpcId
 Outputs:
   ScanQueueArn:
     Description: 'The ARN of the Scan Queue.'
