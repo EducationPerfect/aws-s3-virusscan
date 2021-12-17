@@ -2,6 +2,14 @@ variables:
   uploadDir: s3-virusscan-templates
   s3TargetDir: s3-virusscan-templates
 
+trigger:
+  tags:
+    include:
+      - '*'
+  branches:
+    exclude:
+      - 'master'
+
 stages:
   - stage: pushTemplate
     displayName: Push template to S3
