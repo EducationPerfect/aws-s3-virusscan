@@ -1,20 +1,27 @@
 variables:
   uploadDir: s3-virusscan-templates
+  s3TargetDir: s3-virusscan-templates
 
 stages:
-  - stage: push
+  - stage: pushTemplate
     displayName: Push template to S3
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
     jobs:
-      - bash: |
-          REFERENCE=$(Build.SourceBranch)
-          TAG_NAME=${REFERENCE#refs/tags/}  # Remove 'refs/tags/' prefix
-          mkdir ${{ variables.uploadDir }}
-          cp template.yaml ${{ variables.uploadDir }}/$TAG_NAME.yaml
-      - task: AmazonWebServices.aws-vsts-tools.S3Upload.S3Upload@1
-        inputs:
-          awsCredentials: live-aws
-          regionName: ap-southeast-2
-          bucketName: ep-development-tools
-          sourceFolder: ${{ variables.uploadDir }}
-          filesAcl: 'public-read'
+      - job: pushTemplate
+        displayName: Push template to S3
+        workspace:
+          clean: all
+        steps:
+          - bash: |
+              REFERENCE=$(Build.SourceBranch)
+              TAG_NAME=${REFERENCE#refs/tags/}  # Remove 'refs/tags/' prefix
+              mkdir ${{ variables.uploadDir }}
+              cp template.yaml ${{ variables.uploadDir }}/$TAG_NAME.yaml
+          - task: S3Upload@1
+            inputs:
+              awsCredentials: 'live-aws'
+              regionName: 'ap-southeast-2'
+              bucketName: 'ep-development-tools'
+              sourceFolder: '${{ variables.uploadDir }}'
+              targetFolder: '${{ variables.s3TargetDir }}'
+              filesAcl: 'public-read'
