@@ -708,9 +708,9 @@ Resources:
         config:
           packages:
             yum:
-              clamd: []
-              clamav: []
-              'clamav-update': []
+              clamd: ['0.103.6-1.el7']
+              clamav: ['0.103.6-1.el7']
+              'clamav-update': ['0.103.6-1.el7']
             rubygems:
               daemons: ['1.3.1']
               'rubysl-securerandom': ['2.0.0']
@@ -967,6 +967,12 @@ Resources:
                 path=Resources.ScanLaunchConfiguration.Metadata.AWS::CloudFormation::Init
                 action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ScanLaunchConfiguration --region ${AWS::Region}
                 runas=root
+            '/etc/cron.d/daily_upgrade_clamav':
+              content: |
+                0 0 * * * root yum upgrade clamav
+              mode: '000644'
+              owner: root
+              group: root
           commands:
             a_enable_freshclam_cron:
               command: 'sed -i "s/^FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g" /etc/sysconfig/freshclam'
@@ -1012,6 +1018,8 @@ Resources:
             p_gem_install_aws_sdk_s3: # workaround for https://github.com/aws/aws-sdk-ruby/pull/2573#issuecomment-913984611
               command: 'gem install aws-sdk-s3 -v 1.54.0 --ignore-dependencies'
               test: '! gem list aws-sdk-s3 -i -v 1.54.0'
+            q_upgrade_clamav: # Ensure clamav is up-to-date on startup
+              command: 'yum upgrade clamav'
           services:
             sysvinit:
               's3-virusscan':
